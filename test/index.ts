@@ -34,20 +34,23 @@ describe("BeaconProxyFactory", function () {
 
     // deploy proxy factory
     const BeaconProxyFactory = await ethers.getContractFactory("BeaconProxyFactory");
-    const beaconProxyFactory = await BeaconProxyFactory.deploy(upgradeableBeacon.address);
+    const beaconProxyFactory = await BeaconProxyFactory.deploy();
     await beaconProxyFactory.deployed();
 
-    // create and initialize instance from factory
-    const data = Token.interface.encodeFunctionData("initialize", ["http://localhost:3000/{id}.json"])
-    const topic = BeaconProxyFactory.interface.getEventTopic("BeaconProxyCreated")
-    const beaconTX = await beaconProxyFactory.newBeaconProxy(data)
-    const tx = await beaconTX.wait();
+    for (let i = 0; i < 10; i++) {
+      const uri = `http://host-${i}/{id}.json`
+      // create and initialize instance from factory
+      const data = Token.interface.encodeFunctionData("initialize", [uri])
+      const topic = BeaconProxyFactory.interface.getEventTopic("BeaconProxyCreated")
+      const beaconTX = await beaconProxyFactory.newBeaconProxy(upgradeableBeacon.address, data)
+      const tx = await beaconTX.wait();
 
-    // get instance and confirm instance readable
-    const [tokenAddr] = tx.logs.filter(log => log.topics.find(t => t === topic))
-        .map(log => BeaconProxyFactory.interface.decodeEventLog("BeaconProxyCreated", log.data))
-        .map(([address]) => address)
-    const deployedToken = Token.attach(tokenAddr)
-    expect(await deployedToken.uri(0)).to.equal("http://localhost:3000/{id}.json")
+      // get instance and confirm instance readable
+      const [tokenAddr] = tx.logs.filter(log => log.topics.find(t => t === topic))
+          .map(log => BeaconProxyFactory.interface.decodeEventLog("BeaconProxyCreated", log.data))
+          .map(([_, address]) => address)
+      const deployedToken = Token.attach(tokenAddr)
+      expect(await deployedToken.uri(0)).to.equal(uri)
+    }
   });
 });

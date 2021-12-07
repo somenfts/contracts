@@ -7,17 +7,11 @@ import "@openzeppelin/contracts-upgradeable/token/ERC1155/presets/ERC1155PresetM
 import "hardhat/console.sol";
 
 contract BeaconProxyFactory {
-    address private beacon;
+    event BeaconProxyCreated(address indexed beacon, BeaconProxy beaconProxy);
 
-    event BeaconProxyCreated(BeaconProxy beaconProxy);
-
-    constructor(address _beacon) {
-        beacon = _beacon;
-    }
-
-    function newBeaconProxy(bytes memory data) public returns (BeaconProxy) {
+    function newBeaconProxy(address beacon, bytes memory data) public returns (BeaconProxy) {
         BeaconProxy beaconProxy = new BeaconProxy(beacon, data);
-        emit BeaconProxyCreated(beaconProxy);
+        emit BeaconProxyCreated(beacon, beaconProxy);
         return beaconProxy;
     }
 }
