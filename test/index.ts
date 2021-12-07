@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import {ExampleTokenV2} from "../typechain";
 
 describe("Greeter", function () {
   it("Should return the new greeting once it's changed", async function () {
@@ -22,7 +23,7 @@ describe("Greeter", function () {
 describe("BeaconProxyFactory", function () {
   it("Should return the new greeting once it's changed", async function () {
     // deploy implementation
-    const Token = await ethers.getContractFactory("ERC1155PresetMinterPauserUpgradeable");
+    const Token = await ethers.getContractFactory("ExampleTokenV1");
     const token = await Token.deploy();
     await token.deployed();
 
@@ -37,6 +38,8 @@ describe("BeaconProxyFactory", function () {
     const beaconProxyFactory = await BeaconProxyFactory.deploy();
     await beaconProxyFactory.deployed();
 
+    // create proxies
+    const tokenAddrs = [];
     for (let i = 0; i < 10; i++) {
       const uri = `http://host-${i}/{id}.json`
       // create and initialize instance from factory
@@ -51,6 +54,24 @@ describe("BeaconProxyFactory", function () {
           .map(([_, address]) => address)
       const deployedToken = Token.attach(tokenAddr)
       expect(await deployedToken.uri(0)).to.equal(uri)
+      expect(await deployedToken.version()).to.equal(1)
+
+      tokenAddrs.push(deployedToken.address)
+    }
+
+    // upgrade beacon
+    const TokenV2 = await ethers.getContractFactory("ExampleTokenV2");
+    const tokenV2 = await TokenV2.deploy();
+    await tokenV2.deployed();
+    await upgradeableBeacon.upgradeTo(tokenV2.address)
+    expect(await upgradeableBeacon.implementation()).to.equal(tokenV2.address)
+
+    // verify proxies are upgraded, too
+    for (let i = 0; i < 10; i++) {
+      const uri = `http://host-${i}/{id}.json`
+      const deployedToken = TokenV2.attach(tokenAddrs[i])
+      expect(await deployedToken.uri(0)).to.equal(uri)
+      expect(await deployedToken.version()).to.equal(2)
     }
   });
 });
