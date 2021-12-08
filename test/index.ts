@@ -27,16 +27,34 @@ describe("BeaconProxyFactory", function () {
     const token = await Token.deploy();
     await token.deployed();
 
-    // deploy beacon
-    const UpgradeableBeacon = await ethers.getContractFactory("UpgradeableBeacon");
-    const upgradeableBeacon = await UpgradeableBeacon.deploy(token.address);
-    await upgradeableBeacon.deployed();
-    expect(await upgradeableBeacon.implementation()).to.equal(token.address)
-
     // deploy proxy factory
     const BeaconProxyFactory = await ethers.getContractFactory("BeaconProxyFactory");
     const beaconProxyFactory = await BeaconProxyFactory.deploy();
     await beaconProxyFactory.deployed();
+
+    let upgradeableBeacon;
+    {
+      // "deploy" beacon
+      const tokenTX = await beaconProxyFactory.newUpgradeableBeacon(token.address);
+      const tx = await tokenTX.wait();
+      const topic = BeaconProxyFactory.interface.getEventTopic("UpgradeableBeaconCreated")
+      const [beaconAddr] = tx.logs.filter(log => log.topics.find(t => t === topic))
+          .map(log => BeaconProxyFactory.interface.decodeEventLog("UpgradeableBeaconCreated", log.data))
+          .map(([_, address]) => address)
+
+      console.log("upgradeableBeacon deployed to", beaconAddr)
+
+      const UpgradeableBeacon = await ethers.getContractFactory("UpgradeableBeacon");
+      upgradeableBeacon = UpgradeableBeacon.attach(beaconAddr)
+      expect(await upgradeableBeacon.implementation()).to.equal(token.address)
+    }
+    console.log("upgradeableBeacon deployed to", upgradeableBeacon.address)
+
+    // deploy beacon
+    // const UpgradeableBeacon = await ethers.getContractFactory("UpgradeableBeacon");
+    // const upgradeableBeacon = await UpgradeableBeacon.deploy(token.address);
+    // await upgradeableBeacon.deployed();
+    // expect(await upgradeableBeacon.implementation()).to.equal(token.address)
 
     // create proxies
     const tokenAddrs = [];

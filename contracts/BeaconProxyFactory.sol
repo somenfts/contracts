@@ -13,4 +13,13 @@ contract BeaconProxyFactory {
         emit BeaconProxyCreated(beacon, beaconProxy);
         return beaconProxy;
     }
+
+    event UpgradeableBeaconCreated(address indexed implementation, UpgradeableBeacon beacon);
+
+    function newUpgradeableBeacon(address impl) public returns (UpgradeableBeacon) {
+        UpgradeableBeacon beacon = new UpgradeableBeacon(impl);
+        beacon.transferOwnership(msg.sender);
+        emit UpgradeableBeaconCreated(impl, beacon);
+        return beacon;
+    }
 }
