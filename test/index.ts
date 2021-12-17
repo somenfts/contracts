@@ -40,6 +40,7 @@ describe("BeaconProxyFactory", function () {
       const topic = BeaconProxyFactory.interface.getEventTopic("UpgradeableBeaconCreated")
       const [beaconAddr] = tx.logs.filter(log => log.topics.find(t => t === topic))
           .map(log => BeaconProxyFactory.interface.decodeEventLog("UpgradeableBeaconCreated", log.data))
+          .map(d => {console.log("UpgradeableBeaconCreated", d); return d})
           .map(([_, address]) => address)
 
       console.log("upgradeableBeacon deployed to", beaconAddr)
